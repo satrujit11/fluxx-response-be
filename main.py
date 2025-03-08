@@ -6,6 +6,7 @@ import os
 import uuid
 from pydantic import BaseModel
 from typing import Optional
+from bson import ObjectId
 
 # Initialize FastAPI app
 app = FastAPI()
@@ -96,6 +97,11 @@ async def register_driver(
 async def get_drivers():
     try:
         drivers = await collection.find().to_list(100)
+        
+        # Convert ObjectId to string for each document
+        for driver in drivers:
+            driver["_id"] = str(driver["_id"])
+        
         return drivers
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
