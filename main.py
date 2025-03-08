@@ -1,12 +1,11 @@
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from motor.motor_asyncio import AsyncIOMotorClient
 import shutil
 import os
 import uuid
-from pydantic import BaseModel
 from typing import Optional
-from bson import ObjectId
 
 # Initialize FastAPI app
 app = FastAPI()
@@ -29,6 +28,9 @@ collection = db["drivers"]
 # Directory to store uploaded files
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+# Mount uploads directory to serve files publicly
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 
 # Function to save uploaded files with unique names
