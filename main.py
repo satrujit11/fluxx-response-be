@@ -5,17 +5,18 @@ import shutil
 import os
 import uuid
 from pydantic import BaseModel
+from typing import Optional
 
 # Initialize FastAPI app
 app = FastAPI()
 
-# Enable CORS to allow frontend requests
+# Enable CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Adjust this if frontend runs elsewhere
+    allow_origins=["*"],  # Adjust if needed
     allow_credentials=True,
-    allow_methods=["*"],  # Allow all HTTP methods
-    allow_headers=["*"],  # Allow all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # MongoDB Connection
@@ -29,20 +30,10 @@ UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
-# Pydantic Model for Data Validation
-class DriverBase(BaseModel):
-    name: str
-    address: str
-    aadharNumber: str
-    panNumber: str
-    dlNumber: str
-    vehicle: str
-
-
 # Function to save uploaded files with unique names
 def save_file(file: UploadFile):
     file_ext = file.filename.split(".")[-1]
-    unique_filename = f"{uuid.uuid4()}.{file_ext}"  # Generate a unique filename
+    unique_filename = f"{uuid.uuid4()}.{file_ext}"
     file_path = os.path.join(UPLOAD_DIR, unique_filename)
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
@@ -55,35 +46,44 @@ async def register_driver(
     name: str = Form(...),
     address: str = Form(...),
     aadharNumber: str = Form(...),
-    panNumber: str = Form(...),
-    dlNumber: str = Form(...),
     vehicle: str = Form(...),
+    panNumber: Optional[str] = Form(None),
+    dlNumber: Optional[str] = Form(None),
     aadharFile: UploadFile = File(...),
-    panFile: UploadFile = File(...),
-    dlFile: UploadFile = File(...),
+    panFile: Optional[UploadFile] = File(None),
+    dlFile: Optional[UploadFile] = File(None),
     riderPhoto: UploadFile = File(...),
 ):
     try:
-        # Save uploaded files
+        # Save required files
         aadhar_path = save_file(aadharFile)
-        pan_path = save_file(panFile)
-        dl_path = save_file(dlFile)
         rider_photo_path = save_file(riderPhoto)
 
-        # Save driver details to MongoDB
+        # Save optional files if provided
+        pan_path = save_file(panFile) if panFile else None
+        dl_path = save_file(dlFile) if dlFile else None
+
+        # Prepare driver data
         driver_data = {
             "name": name,
             "address": address,
             "aadharNumber": aadharNumber,
-            "panNumber": panNumber,
-            "dlNumber": dlNumber,
             "vehicle": vehicle,
             "aadharFile": aadhar_path,
-            "panFile": pan_path,
-            "dlFile": dl_path,
             "riderPhoto": rider_photo_path,
         }
 
+        # Add optional fields if present
+        if panNumber:
+            driver_data["panNumber"] = panNumber
+        if dlNumber:
+            driver_data["dlNumber"] = dlNumber
+        if pan_path:
+            driver_data["panFile"] = pan_path
+        if dl_path:
+            driver_data["dlFile"] = dl_path
+
+        # Save to MongoDB
         result = await collection.insert_one(driver_data)
         return {"message": "Driver registered successfully", "id": str(result.inserted_id)}
 
