@@ -50,6 +50,7 @@ async def register_driver(
     address: str = Form(...),
     aadharNumber: str = Form(...),
     vehicle: str = Form(...),
+    city: str = Form(...),
     panNumber: Optional[str] = Form(None),
     dlNumber: Optional[str] = Form(None),
     aadharFile: UploadFile = File(...),
@@ -70,6 +71,7 @@ async def register_driver(
         driver_data = {
             "name": name,
             "address": address,
+            "city": city,
             "aadharNumber": aadharNumber,
             "vehicle": vehicle,
             "aadharFile": aadhar_path,
